@@ -4,18 +4,20 @@ import Hero from './components/Hero.jsx'
 import Leaderboard from './components/Leaderboard.jsx'
 import Tops from './components/Tops.jsx'
 import { SERVER } from './config.js'
-import { MEMBERS } from './data/mock.js'
+import { useMembers } from './hooks/useMembers.js'
 
 export default function App() {
+  const { members, meta, live } = useMembers()
+
   return (
     <>
       <AuroraBackground />
       <div className="page">
         <Nav />
         <main>
-          <Hero members={MEMBERS} />
-          <Leaderboard members={MEMBERS} />
-          <Tops members={MEMBERS} />
+          <Hero members={members} meta={meta} />
+          <Leaderboard members={members} live={live} />
+          <Tops members={members} />
         </main>
         <footer className="footer">
           <div className="wrap footer-inner">

@@ -20,15 +20,19 @@ Para generar la versión final (la que se publica): `npm run build`. Queda en `d
 | Qué | Dónde |
 |---|---|
 | Título, texto de presentación y link de invitación al Discord | `src/config.js` |
-| Miembros, horas, actividad y juegos (datos de ejemplo) | `src/data/mock.js` |
+| Datos de ejemplo (se muestran solo cuando el bot está apagado) | `src/data/mock.js` |
+| El bot que cuenta las horas | carpeta `bot/` (guía en `bot/README.md`) |
 | Colores, tipografías, tamaños, animaciones | `src/styles.css` (variables al inicio) |
 | Fondo aurora y estela del mouse | `src/components/AuroraBackground.jsx` |
 | Imágenes y logo | `public/` (`mascot.webp`, `logo-sm.webp`, `favicon.png`, `og.jpg`) |
 
 El link de invitación (`invite` en `src/config.js`) está con un valor de relleno: reemplazalo por el real.
 
-## Cuando llegue el bot
+## El bot
 
-Los tops se calculan a partir de la lista de miembros, así que alcanza con que el bot entregue
-los datos con la misma forma que `src/data/mock.js` (por ejemplo, un JSON publicado en alguna URL)
-y que `App.jsx` los pida en lugar de importar `MEMBERS`.
+La carpeta `bot/` tiene el bot de Discord que cuenta las horas en voz y las horas jugadas fuera de voz
+("Rancho aparte"), y las entrega a la página. La guía paso a paso está en `bot/README.md`.
+
+Con el bot encendido, `npm run dev` muestra los datos reales automáticamente (busca el bot en
+`http://localhost:3001`). Con el bot apagado, la página muestra los datos de ejemplo y lo indica con
+una etiqueta junto al título del ranking.

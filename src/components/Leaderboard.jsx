@@ -1,13 +1,7 @@
 import { useMemo } from 'react'
 import { useInView } from '../hooks/useInView.js'
 import CountUp from './CountUp.jsx'
-
-const STATUS_LABEL = {
-  online: 'En línea',
-  idle: 'Ausente',
-  dnd: 'No molestar',
-  offline: 'Desconectado',
-}
+import Avatar from './Avatar.jsx'
 
 function PadIcon() {
   return (
@@ -32,38 +26,33 @@ function Activity({ member }) {
       </div>
     )
   }
-  const text = member.status === 'offline' ? 'Desconectado' : 'En Discord, sin jugar'
   return (
     <div className="activity">
-      <span className="act-text">{text}</span>
+      <span className="act-text">{member.status === 'offline' ? 'Desconectado' : 'Sin juego activo'}</span>
     </div>
   )
 }
 
 function Row({ member, rank, max, index, run }) {
-  const pct = member.hours / max
   return (
-    <li className={`row rank-${rank}`} style={{ '--i': index, '--p': pct }}>
+    <li className={`row rank-${rank}`} style={{ '--i': index, '--p': member.hours / max }}>
       <span className="rank">{rank}</span>
 
       <div className="member">
-        <span
-          className="avatar"
-          style={{ '--h': member.hue }}
-          role="img"
-          aria-label={STATUS_LABEL[member.status]}
-        >
-          {member.name[0]}
-          <i className={`dot ${member.status}`} />
-        </span>
+        <Avatar member={member} />
         <strong className="name">{member.name}</strong>
+        {member.inVoice && (
+          <span className="voice-tag" title="Está en un canal de voz">
+            en voz
+          </span>
+        )}
       </div>
 
       <Activity member={member} />
 
       <div className="hours">
         <span className="hours-num">
-          <CountUp value={member.hours} run={run} duration={1100 + index * 60} /> h
+          <CountUp value={member.hours} run={run} decimals={1} duration={1100 + index * 60} /> h
         </span>
         <span className="bar"><i /></span>
       </div>
@@ -71,33 +60,48 @@ function Row({ member, rank, max, index, run }) {
   )
 }
 
-export default function Leaderboard({ members }) {
+export default function Leaderboard({ members, live }) {
   const [ref, inView] = useInView(0.15)
-  const sorted = useMemo(() => [...members].sort((a, b) => b.hours - a.hours), [members])
-  const max = sorted[0]?.hours || 1
+
+  // Solo quienes ya sumaron horas en voz o están en voz ahora
+  const rows = useMemo(
+    () => members.filter((m) => m.hours > 0 || m.inVoice).sort((a, b) => b.hours - a.hours),
+    [members],
+  )
+  const max = rows[0]?.hours || 1
 
   return (
     <section className="section wrap" id="ranking">
       <div className="section-head">
-        <h2>Ranking por horas conectadas</h2>
+        <div className="head-row">
+          <h2>Ranking por horas en voz</h2>
+          <span className={`chip ${live ? 'on' : ''}`}>{live ? 'En vivo' : 'Datos de ejemplo'}</span>
+        </div>
         <p>
-          Cuenta el tiempo que cada uno pasa en el servidor. Por ahora son datos de ejemplo; los
-          reales los va a cargar el bot.
+          {live
+            ? 'Suma el tiempo que cada uno pasa en los canales de voz. Se actualiza solo.'
+            : 'Estos son datos de ejemplo. Cuando el bot esté conectado, acá van a aparecer los reales.'}
         </p>
       </div>
 
       <div className={`board ${inView ? 'in' : ''}`} ref={ref}>
-        <div className="board-cols" aria-hidden="true">
-          <span />
-          <span>Miembro</span>
-          <span>Actividad</span>
-          <span className="right">Horas</span>
-        </div>
-        <ol className="rows">
-          {sorted.map((m, i) => (
-            <Row key={m.id} member={m} rank={i + 1} max={max} index={i} run={inView} />
-          ))}
-        </ol>
+        {rows.length === 0 ? (
+          <p className="empty">Todavía nadie sumó horas. Entrá a un canal de voz del Discord y vas a aparecer acá.</p>
+        ) : (
+          <>
+            <div className="board-cols" aria-hidden="true">
+              <span />
+              <span>Miembro</span>
+              <span>Actividad</span>
+              <span className="right">Horas</span>
+            </div>
+            <ol className="rows">
+              {rows.map((m, i) => (
+                <Row key={m.id} member={m} rank={i + 1} max={max} index={i} run={inView} />
+              ))}
+            </ol>
+          </>
+        )}
       </div>
     </section>
   )

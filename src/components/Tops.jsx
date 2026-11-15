@@ -1,10 +1,15 @@
 import { useMemo, useState } from 'react'
 
+const nf = new Intl.NumberFormat('es-AR', { maximumFractionDigits: 1 })
+
+const topKey = (map = {}) => Object.entries(map).sort((a, b) => b[1] - a[1])[0]?.[0] ?? ''
+
 // Arma cada top a partir de los datos de los miembros.
 function buildTops(members) {
+  // Horas por juego, solo las jugadas en canales de voz
   const perGame = {}
   for (const m of members) {
-    for (const [game, h] of Object.entries(m.games)) {
+    for (const [game, h] of Object.entries(m.games ?? {})) {
       ;(perGame[game] ??= []).push({ name: m.name, h })
     }
   }
@@ -24,7 +29,7 @@ function buildTops(members) {
     {
       id: 'games',
       title: 'Juegos con más horas',
-      desc: 'Lo que más juega el grupo, sumando a todos',
+      desc: 'Lo que más juega el grupo en voz, sumando a todos',
       rows: games.map((g) => ({
         label: g.game,
         sub: `${g.players} ${g.players === 1 ? 'jugador' : 'jugadores'}`,
@@ -36,18 +41,14 @@ function buildTops(members) {
       id: 'leaders',
       title: 'Quién lidera cada juego',
       desc: 'El que más horas acumuló en cada uno',
-      rows: games.map((g) => ({
-        label: g.game,
-        sub: g.leader.name,
-        value: g.leader.h,
-        unit: 'h',
-      })),
+      rows: games.map((g) => ({ label: g.game, sub: g.leader.name, value: g.leader.h, unit: 'h' })),
     },
     {
       id: 'week',
       title: 'Más activos esta semana',
-      desc: 'Horas conectadas en los últimos 7 días',
-      rows: [...members]
+      desc: 'Horas en voz en los últimos 7 días',
+      rows: members
+        .filter((m) => m.week > 0)
         .sort((a, b) => b.week - a.week)
         .slice(0, 5)
         .map((m) => ({ label: m.name, sub: m.activity ? m.activity.name : '', value: m.week, unit: 'h' })),
@@ -55,11 +56,23 @@ function buildTops(members) {
     {
       id: 'streak',
       title: 'Rachas más largas',
-      desc: 'Días seguidos conectándose',
-      rows: [...members]
+      desc: 'Días seguidos entrando a voz',
+      rows: members
+        .filter((m) => m.streak > 0)
         .sort((a, b) => b.streak - a.streak)
         .slice(0, 5)
-        .map((m) => ({ label: m.name, sub: '', value: m.streak, unit: 'días' })),
+        .map((m) => ({ label: m.name, sub: '', value: m.streak, unit: m.streak === 1 ? 'día' : 'días' })),
+    },
+    // Siempre al final
+    {
+      id: 'rancho',
+      title: 'Rancho aparte',
+      desc: 'Horas jugadas sin estar en un canal de voz',
+      rows: members
+        .filter((m) => m.rancho > 0)
+        .sort((a, b) => b.rancho - a.rancho)
+        .slice(0, 8)
+        .map((m) => ({ label: m.name, sub: topKey(m.ranchoGames), value: m.rancho, unit: 'h' })),
     },
   ]
 }
@@ -87,18 +100,22 @@ function Item({ top, open, onToggle }) {
       </h3>
       <div className="panel" id={`p-${top.id}`} role="region" aria-labelledby={`b-${top.id}`}>
         <div className="panel-inner">
-          <ol className="toplist">
-            {top.rows.map((r, i) => (
-              <li className="toprow" key={r.label} style={{ '--i': i, '--p': r.value / max }}>
-                <span className="lbl">{r.label}</span>
-                <span className="val">
-                  {r.value} {r.unit}
-                </span>
-                {r.sub && <span className="sub">{r.sub}</span>}
-                <span className="bar"><i /></span>
-              </li>
-            ))}
-          </ol>
+          {top.rows.length === 0 ? (
+            <p className="empty-note">Todavía no hay datos para este top.</p>
+          ) : (
+            <ol className="toplist">
+              {top.rows.map((r, i) => (
+                <li className="toprow" key={r.label} style={{ '--i': i, '--p': r.value / max }}>
+                  <span className="lbl">{r.label}</span>
+                  <span className="val">
+                    {nf.format(r.value)} {r.unit}
+                  </span>
+                  {r.sub && <span className="sub">{r.sub}</span>}
+                  <span className="bar"><i /></span>
+                </li>
+              ))}
+            </ol>
+          )}
         </div>
       </div>
     </div>

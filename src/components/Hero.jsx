@@ -1,10 +1,14 @@
 import { SERVER } from '../config.js'
 import CountUp from './CountUp.jsx'
 
-export default function Hero({ members }) {
-  const online = members.filter((m) => m.status !== 'offline').length
-  const totalHours = members.reduce((s, m) => s + m.hours, 0)
-  const gameCount = new Set(members.flatMap((m) => Object.keys(m.games))).size
+export default function Hero({ members, meta }) {
+  // Con el bot conectado, estos dos números salen del servidor completo
+  const online = meta?.onlineCount ?? members.filter((m) => m.status !== 'offline').length
+  const memberCount = meta?.memberCount ?? members.length
+  const totalHours = Math.round(members.reduce((s, m) => s + m.hours, 0))
+  const gameCount = new Set(
+    members.flatMap((m) => [...Object.keys(m.games ?? {}), ...Object.keys(m.ranchoGames ?? {})]),
+  ).size
 
   return (
     <section className="hero wrap" id="inicio">
@@ -26,10 +30,10 @@ export default function Hero({ members }) {
         <dl className="stats">
           <div>
             <dt>miembros</dt>
-            <dd><CountUp value={members.length} /></dd>
+            <dd><CountUp value={memberCount} /></dd>
           </div>
           <div>
-            <dt>horas juntos</dt>
+            <dt>horas en voz</dt>
             <dd><CountUp value={totalHours} /></dd>
           </div>
           <div>

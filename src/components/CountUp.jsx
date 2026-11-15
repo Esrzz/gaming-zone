@@ -1,14 +1,23 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
-const fmt = new Intl.NumberFormat('es-AR')
+const formatters = {}
+const formatter = (decimals) =>
+  (formatters[decimals] ??= new Intl.NumberFormat('es-AR', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: decimals,
+  }))
 
-// Número que sube hasta `value` cuando `run` pasa a true.
-export default function CountUp({ value, run = true, duration = 1200 }) {
+// Número que sube hasta `value`. Si el valor cambia más tarde (datos en vivo),
+// anima desde lo que se estaba mostrando, no desde cero.
+export default function CountUp({ value, run = true, duration = 1200, decimals = 0 }) {
   const [n, setN] = useState(0)
+  const shown = useRef(0)
 
   useEffect(() => {
     if (!run) return
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    const from = shown.current
+    if (from === value || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      shown.current = value
       setN(value)
       return
     }
@@ -18,12 +27,14 @@ export default function CountUp({ value, run = true, duration = 1200 }) {
       start ??= t
       const p = Math.min((t - start) / duration, 1)
       const eased = 1 - Math.pow(1 - p, 3)
-      setN(Math.round(value * eased))
+      const v = from + (value - from) * eased
+      shown.current = v
+      setN(v)
       if (p < 1) raf = requestAnimationFrame(tick)
     }
     raf = requestAnimationFrame(tick)
     return () => cancelAnimationFrame(raf)
   }, [value, run, duration])
 
-  return <>{fmt.format(n)}</>
+  return <>{formatter(decimals).format(n)}</>
 }
