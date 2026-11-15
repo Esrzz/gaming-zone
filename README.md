@@ -22,6 +22,7 @@ Para generar la versión final (la que se publica): `npm run build`. Queda en `d
 | Título, texto de presentación y link de invitación al Discord | `src/config.js` |
 | Datos de ejemplo (se muestran solo cuando el bot está apagado) | `src/data/mock.js` |
 | El bot que cuenta las horas | carpeta `bot/` (guía en `bot/README.md`) |
+| El puente gratuito en Cloudflare para publicar | carpeta `worker/` (guía en `PUBLICAR.md`) |
 | Colores, tipografías, tamaños, animaciones | `src/styles.css` (variables al inicio) |
 | Fondo aurora y estela del mouse | `src/components/AuroraBackground.jsx` |
 | Imágenes y logo | `public/` (`mascot.webp`, `logo-sm.webp`, `favicon.png`, `og.jpg`) |
@@ -36,3 +37,9 @@ La carpeta `bot/` tiene el bot de Discord que cuenta las horas en voz y las hora
 Con el bot encendido, `npm run dev` muestra los datos reales automáticamente (busca el bot en
 `http://localhost:3001`). Con el bot apagado, la página muestra los datos de ejemplo y lo indica con
 una etiqueta junto al título del ranking.
+
+## Publicarlo gratis
+
+La guía completa está en **`PUBLICAR.md`**: el bot envía los datos a un Worker gratuito de Cloudflare
+(carpeta `worker/`) y la página, publicada en Cloudflare Pages, los lee de ahí. Las direcciones quedan
+como `NOMBRE.pages.dev` y `NOMBRE.workers.dev`.

@@ -1,0 +1,15 @@
+{
+  "name": "gaming-zone-api",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Puente gratuito en Cloudflare: el bot le envía los datos y la página los lee de acá.",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "test": "node --test"
+  },
+  "devDependencies": {
+    "wrangler": "^4.0.0"
+  }
+}

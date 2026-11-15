@@ -67,6 +67,8 @@ En modo desarrollo la página busca los datos en `http://localhost:3001` sola. S
 | `COUNT_VOICE_ONLY_WHEN_PLAYING` | `true` = en voz solo suma si además juega |
 | `STREAK_MIN_MINUTES` | Minutos mínimos en voz por día para sumar a la racha |
 | `ALLOWED_ORIGIN` | Qué páginas pueden leer los datos (`*` = cualquiera) |
+| `PUSH_URL`, `PUSH_TOKEN` | Para publicar los datos en la nube (ver `PUBLICAR.md`). Si están vacías, el bot solo sirve los datos en tu PC |
+| `PUSH_EVERY_SECONDS` | Cada cuánto publica en la nube (120 por defecto, mínimo 90) |
 
 ## Pasarlo a la Raspberry Pi
 
@@ -93,4 +95,4 @@ Los datos se guardan en el disco cada 5 minutos y al cerrar el bot de forma norm
 
 ## Para publicar la página
 
-Cuando la página esté en internet, tiene que poder llegar a la API del bot. Si el bot corre en la Raspberry de tu casa, hace falta exponerla con HTTPS (por ejemplo, con un túnel de Cloudflare, que es gratis). Lo armamos cuando lleguemos a la parte de publicar.
+Cuando la página esté en internet no puede leer directamente el bot que corre en tu casa. Por eso el bot puede publicar los datos en un Worker gratuito de Cloudflare (variables `PUSH_URL` y `PUSH_TOKEN` del `.env`) y la página los lee de ahí. La guía paso a paso está en `PUBLICAR.md`, en la carpeta principal del proyecto.

@@ -3,6 +3,7 @@ import { loadConfig } from './config.js'
 import { loadStore, saveStore } from './store.js'
 import { applyTick, buildPublic, dayKey, pruneOldDays } from './tracker.js'
 import { startApi } from './api.js'
+import { createPublisher } from './publisher.js'
 
 let cfg
 try {
@@ -32,6 +33,7 @@ const client = new Client({
 let guild = null
 let tickTimer = null
 let saveTimer = null
+let pushTimer = null
 
 // Foto instantánea de los miembros del servidor, en el formato que usa tracker.js
 function snapshotGuild(g) {
@@ -78,10 +80,21 @@ function startTicking() {
   saveTimer = setInterval(save, cfg.saveEveryMs)
 }
 
+// Si hay PUSH_URL en .env, manda los datos a la nube cada tanto
+function startPublishing() {
+  if (!cfg.pushUrl) return
+  const publisher = createPublisher({ url: cfg.pushUrl, token: cfg.pushToken })
+  const publish = () => publisher.push(buildPublic(store, snapshotGuild(guild), cfg))
+  publish()
+  pushTimer = setInterval(publish, cfg.pushEveryMs)
+  console.log(`Publicando los datos en ${cfg.pushUrl} cada ${cfg.pushEveryMs / 1000} segundos.`)
+}
+
 function shutdown(signal) {
   console.log(`\nRecibí ${signal}, guardando datos y cerrando...`)
   clearInterval(tickTimer)
   clearInterval(saveTimer)
+  clearInterval(pushTimer)
   save()
   server.close()
   client.destroy()
@@ -124,6 +137,7 @@ client.once(Events.ClientReady, async (c) => {
 
   console.log(`Servidor: ${guild.name} (${guild.memberCount} miembros). Empezando a contar.`)
   startTicking()
+  startPublishing()
 })
 
 client.login(cfg.token).catch((err) => {

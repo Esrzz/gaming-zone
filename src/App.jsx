@@ -7,7 +7,7 @@ import { SERVER } from './config.js'
 import { useMembers } from './hooks/useMembers.js'
 
 export default function App() {
-  const { members, meta, live } = useMembers()
+  const { members, meta, live, stale } = useMembers()
 
   return (
     <>
@@ -16,7 +16,7 @@ export default function App() {
         <Nav />
         <main>
           <Hero members={members} meta={meta} />
-          <Leaderboard members={members} live={live} />
+          <Leaderboard members={members} live={live} stale={stale} />
           <Tops members={members} />
         </main>
         <footer className="footer">

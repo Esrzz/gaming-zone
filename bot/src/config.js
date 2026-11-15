@@ -16,6 +16,10 @@ export function loadConfig(env = process.env) {
     )
   }
 
+  if (env.PUSH_URL && !env.PUSH_TOKEN) {
+    throw new Error('Si usás PUSH_URL, también hay que completar PUSH_TOKEN en el archivo .env.')
+  }
+
   return {
     token: env.DISCORD_TOKEN,
     guildId: env.GUILD_ID,
@@ -27,6 +31,11 @@ export function loadConfig(env = process.env) {
     voiceRequiresGame: env.COUNT_VOICE_ONLY_WHEN_PLAYING === 'true',
     streakMinSeconds: (Number(env.STREAK_MIN_MINUTES) || 10) * 60,
     dataFile: env.DATA_FILE || fileURLToPath(new URL('../data/stats.json', import.meta.url)),
+    // Publicación en la nube (opcional, para cuando la página está en internet)
+    pushUrl: env.PUSH_URL || '',
+    pushToken: env.PUSH_TOKEN || '',
+    // Mínimo 90 s: el plan gratis de Cloudflare permite 1.000 escrituras por día
+    pushEveryMs: Math.max(90, Number(env.PUSH_EVERY_SECONDS) || 120) * 1000,
     tickMs: 30_000, // cada cuánto se suma el tiempo
     saveEveryMs: 5 * 60_000, // cada cuánto se guarda en disco (cuida la SD de la Raspberry)
   }

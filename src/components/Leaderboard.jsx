@@ -60,7 +60,7 @@ function Row({ member, rank, max, index, run }) {
   )
 }
 
-export default function Leaderboard({ members, live }) {
+export default function Leaderboard({ members, live, stale }) {
   const [ref, inView] = useInView(0.15)
 
   // Solo quienes ya sumaron horas en voz o están en voz ahora
@@ -75,12 +75,16 @@ export default function Leaderboard({ members, live }) {
       <div className="section-head">
         <div className="head-row">
           <h2>Ranking por horas en voz</h2>
-          <span className={`chip ${live ? 'on' : ''}`}>{live ? 'En vivo' : 'Datos de ejemplo'}</span>
+          <span className={`chip ${live && !stale ? 'on' : ''}`}>
+            {stale ? 'Bot desconectado' : live ? 'En vivo' : 'Datos de ejemplo'}
+          </span>
         </div>
         <p>
-          {live
-            ? 'Suma el tiempo que cada uno pasa en los canales de voz. Se actualiza solo.'
-            : 'Estos son datos de ejemplo. Cuando el bot esté conectado, acá van a aparecer los reales.'}
+          {stale
+            ? 'El bot está desconectado en este momento. Se muestran las últimas horas guardadas.'
+            : live
+              ? 'Suma el tiempo que cada uno pasa en los canales de voz. Se actualiza solo.'
+              : 'Estos son datos de ejemplo. Cuando el bot esté conectado, acá van a aparecer los reales.'}
         </p>
       </div>
 
