@@ -8,6 +8,7 @@ import { createIconResolver } from './gameIcons.js'
 import { parseSpotify, pruneMusic } from './music.js'
 import { updateRecords } from './records.js'
 import { updateMasters } from './masters.js'
+import { pruneEvents } from './events.js'
 
 let cfg
 try {
@@ -75,6 +76,7 @@ function save() {
   try {
     pruneOldDays(store, dayKey(new Date(), cfg.timezone))
     pruneMusic(store)
+    pruneEvents(store)
     saveStore(store, cfg.dataFile)
   } catch (err) {
     console.error('No pude guardar los datos:', err.message)

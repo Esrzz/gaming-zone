@@ -5,6 +5,7 @@
 // y, en la página, su título, descripción e imagen en src/data/records.js con el mismo id.
 
 import { weekSeconds, streakDays, dayKey } from './tracker.js'
+import { addEvent } from './events.js'
 
 const HOUR = 3600
 const keys = (o) => Object.keys(o ?? {})
@@ -104,6 +105,8 @@ export const RECORD_DEFS = [
 
 const keyOf = (c) => (c.game ? `g:${c.game}` : `m:${c.id}`)
 const MAX_HISTORY = 5
+const toUnit = (kind, v) => (kind === 'hours' ? Math.round((v / 3600) * 100) / 100 : v) // igual que lo que ve la página
+const who = (list) => list.map((h) => (h.game ? { n: h.game } : { id: h.id, n: h.name }))
 
 // Revisa cada categoría con los datos actuales y actualiza los récords guardados.
 // Un récord solo cambia de dueño cuando alguien lo SUPERA; si empatan, comparten.
@@ -135,6 +138,8 @@ export function updateRecords(store, snapshot, now, opts) {
         winners.every((w) => cur.holders.some((h) => (h.game ? `g:${h.game}` : `m:${h.id}`) === keyOf(w)))
       const history = cur?.history ?? []
       if (cur && !sameHolders) {
+        // novedad: alguien nuevo se quedó con el récord (la primera vez que se define no se avisa)
+        addEvent(store, { k: 'record', rid: def.id, who: who(winners.map(toHolder)), from: who(cur.holders), v: toUnit(def.kind, best), pv: toUnit(def.kind, cur.value) }, now)
         history.push({ value: cur.value, holders: cur.holders.map((h) => h.name ?? h.game), at: cur.at })
         if (history.length > MAX_HISTORY) history.shift()
       }
@@ -150,6 +155,7 @@ export function updateRecords(store, snapshot, now, opts) {
       for (const w of winners) {
         if (!cur.holders.some((h) => (h.game ? `g:${h.game}` : `m:${h.id}`) === keyOf(w))) {
           cur.holders.push(toHolder(w))
+          addEvent(store, { k: 'tie', rid: def.id, who: who([toHolder(w)]), v: toUnit(def.kind, best) }, now)
           changed = true
         }
       }

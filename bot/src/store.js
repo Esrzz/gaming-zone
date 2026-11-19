@@ -5,7 +5,7 @@ import path from 'node:path'
 // Es chico: unos pocos KB para 40 personas.
 
 export function emptyStore() {
-  return { version: 1, members: {}, gameApps: {}, gameIcons: {}, records: {}, masters: {} }
+  return { version: 1, members: {}, gameApps: {}, gameIcons: {}, records: {}, masters: {}, events: [] }
 }
 
 export function loadStore(file) {
@@ -25,6 +25,7 @@ export function loadStore(file) {
       gameIcons: data.gameIcons ?? {},
       records: data.records ?? {},
       masters: data.masters ?? {},
+      events: Array.isArray(data.events) ? data.events : [],
     }
   } catch {
     // No lo pisamos en silencio: sería perder todo el historial.

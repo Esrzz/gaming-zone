@@ -7,6 +7,8 @@
 // Los puestos solo cambian cuando alguien SUPERA a otro (si empatan, no se mueve nadie).
 // Se guardan en store.masters[juego] = { holders: [{ id, name, at }], history }, aparte de las sesiones.
 
+import { addEvent } from './events.js'
+
 const HOUR = 3600
 export const MIN_TOTAL_HOURS = 10
 export const MIN_PLAYERS = 2
@@ -66,6 +68,15 @@ export function updateMasters(store, snapshot, now) {
       if (cur.holders) cur.holders = holders // al día con los nombres
       else store.masters[game] = { holders, history: cur.history ?? [] }
       continue
+    }
+    // novedades (en silencio si el juego recién empieza a tener podio, si es el formato viejo o si alguien se fue del servidor)
+    if (cur?.holders && before.every((h) => live.has(h.id))) {
+      const known = new Set(before.map((h) => h.id))
+      const p = (h) => [{ id: h.id, n: h.name }]
+      holders.forEach((h, i) => {
+        if (i === 0 && h.id !== before[0]?.id) addEvent(store, { k: 'master', game, who: p(h), ...(before[0] ? { from: p(before[0]) } : {}) }, now)
+        else if (i > 0 && !known.has(h.id)) addEvent(store, { k: 'podium', game, rank: i + 1, who: p(h) }, now)
+      })
     }
     const history = cur?.history ?? []
     if (before[0] && before[0].id !== holders[0].id) {

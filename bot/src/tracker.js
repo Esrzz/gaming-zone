@@ -6,6 +6,7 @@
 //  - Conectado sin jugar ni estar en voz  -> no suma nada.
 
 import { publicMasters } from './masters.js'
+import { publicEvents } from './events.js'
 
 export function dayKey(date, timeZone) {
   // 'en-CA' formatea como YYYY-MM-DD
@@ -54,6 +55,7 @@ function newRecord(m) {
 
 const SESSION_GAP_MS = 5 * 60_000 // si pasan más de 5 min sin registrar, es otra sesión
 const MAX_SESSIONS = 20
+const MUSIC_TOP = 50 // artistas y canciones que se mandan a la página para "Mostrar lista completa"
 const MIN_SESSION_SECONDS = 60
 
 const topOf = (map = {}) => Object.entries(map).sort((a, b) => b[1] - a[1])[0]?.[0] ?? null
@@ -279,7 +281,7 @@ function buildMusicTop(store, live) {
       .map(finish)
       .filter((x) => x.hours > 0)
 
-  return { hours: toHours(total), people: people.size, artists: rank(artists, 20), songs: rank(songs, 20) }
+  return { hours: toHours(total), people: people.size, artists: rank(artists, MUSIC_TOP), songs: rank(songs, MUSIC_TOP) }
 }
 
 // Arma el JSON que consume la página.
@@ -388,6 +390,7 @@ export function buildPublic(store, snapshot, opts, now = new Date()) {
     musicTop,
     records,
     masters,
+    events: publicEvents(store),
     members,
   }
 }
