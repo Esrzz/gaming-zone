@@ -1,6 +1,6 @@
 # Gaming Zone
 
-Landing del Discord Gaming Zone. React + Vite, fondo aurora reactivo al mouse, ranking de miembros por horas y tops desplegables.
+Landing del Discord Gaming Zone. React + Vite,Le puse estilos basados en la estetica del dueño del Discord respetando colores e imagenes.
 
 ## Correrlo en tu compu
 
