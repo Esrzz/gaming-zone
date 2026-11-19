@@ -4,6 +4,7 @@ import { loadStore, saveStore } from './store.js'
 import { applyTick, buildPublic, dayKey, pruneOldDays } from './tracker.js'
 import { startApi } from './api.js'
 import { createPublisher } from './publisher.js'
+import { createIconResolver } from './gameIcons.js'
 
 let cfg
 try {
@@ -30,6 +31,13 @@ const client = new Client({
   ],
 })
 
+const icons = createIconResolver({
+  store,
+  log: (msg) => console.log(`[íconos] ${msg}`),
+  // también los juegos ya registrados antes de guardar sus IDs
+  extraGames: () => Object.values(store.members).flatMap((r) => [...Object.keys(r.games), ...Object.keys(r.ranchoGames)]),
+})
+
 let guild = null
 let tickTimer = null
 let saveTimer = null
@@ -49,8 +57,10 @@ function snapshotGuild(g) {
       avatar: m.displayAvatarURL({ extension: 'webp', size: 128, forceStatic: true }),
       status: m.presence?.status ?? 'offline',
       game: playing?.name ?? null,
+      gameAppId: playing?.applicationId ?? null,
       // el canal AFK no cuenta como estar en voz
       inVoice: Boolean(voiceChannelId) && voiceChannelId !== g.afkChannelId,
+      channelId: voiceChannelId ?? null,
     })
   }
   return out
@@ -77,7 +87,11 @@ function startTicking() {
     applyTick(store, snapshotGuild(guild), dt, new Date(now), cfg)
   }, cfg.tickMs)
 
-  saveTimer = setInterval(save, cfg.saveEveryMs)
+  saveTimer = setInterval(() => {
+    save()
+    icons.resolve().catch(() => {})
+  }, cfg.saveEveryMs)
+  setTimeout(() => icons.resolve().catch(() => {}), 45_000)
 }
 
 // Si hay PUSH_URL en .env, manda los datos a la nube cada tanto

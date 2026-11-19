@@ -27,7 +27,42 @@ export function recentDayKeys(todayKey, n) {
 }
 
 function newRecord(m) {
-  return { name: m.name, avatar: m.avatar, voice: 0, rancho: 0, games: {}, ranchoGames: {}, days: {} }
+  return {
+    name: m.name,
+    avatar: m.avatar,
+    voice: 0,
+    rancho: 0,
+    games: {},
+    ranchoGames: {},
+    days: {},
+    // sesiones en voz (rachas continuas de presencia) y tiempo compartido con cada persona
+    sessions: [],
+    sessionCount: 0,
+    sessionSeconds: 0,
+    longest: 0,
+    together: {},
+  }
+}
+
+const SESSION_GAP_MS = 5 * 60_000 // si pasan más de 5 min sin registrar, es otra sesión
+const MAX_SESSIONS = 20
+const MIN_SESSION_SECONDS = 60
+
+const topOf = (map = {}) => Object.entries(map).sort((a, b) => b[1] - a[1])[0]?.[0] ?? null
+
+// Cierra la sesión en curso (si hay) y la guarda en el historial
+function endSession(rec) {
+  const cur = rec.cur
+  if (!cur) return
+  delete rec.cur
+  const seconds = (cur.e - cur.s) / 1000
+  if (seconds < MIN_SESSION_SECONDS) return
+  rec.sessions ??= []
+  rec.sessions.push({ s: cur.s, e: cur.e, g: topOf(cur.g) })
+  if (rec.sessions.length > MAX_SESSIONS) rec.sessions.splice(0, rec.sessions.length - MAX_SESSIONS)
+  rec.sessionCount = (rec.sessionCount ?? 0) + 1
+  rec.sessionSeconds = (rec.sessionSeconds ?? 0) + seconds
+  rec.longest = Math.max(rec.longest ?? 0, seconds)
 }
 
 function add(map, key, seconds) {
@@ -42,9 +77,12 @@ function add(map, key, seconds) {
 export function applyTick(store, snapshot, dt, now, opts) {
   if (!(dt > 0)) return
   const today = dayKey(now, opts.timezone)
+  const nowMs = now.getTime()
+  const byChannel = new Map() // canal de voz -> miembros que están ahí contando
 
   for (const m of snapshot) {
     const playing = Boolean(m.game)
+    if (playing && m.gameAppId) (store.gameApps ??= {})[m.game] = m.gameAppId
     const voiceCounts = m.inVoice && (!opts.voiceRequiresGame || playing)
     const ranchoCounts = !m.inVoice && playing
 
@@ -53,6 +91,7 @@ export function applyTick(store, snapshot, dt, now, opts) {
       if (rec) {
         rec.name = m.name
         rec.avatar = m.avatar
+        endSession(rec)
       }
       continue
     }
@@ -65,9 +104,29 @@ export function applyTick(store, snapshot, dt, now, opts) {
       rec.voice += dt
       add(rec.days, today, dt)
       if (playing) add(rec.games, m.game, dt)
+
+      if (rec.cur && nowMs - rec.cur.e > SESSION_GAP_MS) endSession(rec)
+      rec.cur ??= { s: nowMs - dt * 1000, e: nowMs, g: {} }
+      rec.cur.e = nowMs
+      if (playing) add(rec.cur.g, m.game, dt)
+
+      if (m.channelId) {
+        const list = byChannel.get(m.channelId) ?? []
+        list.push(m.id)
+        byChannel.set(m.channelId, list)
+      }
     } else {
+      endSession(rec)
       rec.rancho += dt
       add(rec.ranchoGames, m.game, dt)
+    }
+  }
+
+  // Tiempo compartido: quienes están en el mismo canal de voz a la vez
+  for (const ids of byChannel.values()) {
+    for (const a of ids) {
+      const together = (store.members[a].together ??= {})
+      for (const b of ids) if (a !== b) add(together, b, dt)
     }
   }
 }
@@ -115,9 +174,30 @@ export function buildPublic(store, snapshot, opts, now = new Date()) {
   const live = new Map(snapshot.map((m) => [m.id, m]))
   const members = []
 
-  for (const [id, rec] of Object.entries(store.members)) {
-    const l = live.get(id)
-    if (!l) continue // se fue del servidor o está excluido
+  for (const l of snapshot) {
+    const id = l.id
+    const rec = store.members[id] ?? newRecord(l)
+
+    const recent = (rec.sessions ?? []).slice(-8).map((x) => ({
+      start: new Date(x.s).toISOString(),
+      minutes: Math.round((x.e - x.s) / 60_000),
+      game: x.g,
+    }))
+    // sesión en curso, si sigue en voz
+    if (rec.cur && l.inVoice) {
+      recent.push({
+        start: new Date(rec.cur.s).toISOString(),
+        minutes: Math.round((now.getTime() - rec.cur.s) / 60_000),
+        game: topOf(rec.cur.g),
+        live: true,
+      })
+    }
+    const together = Object.entries(rec.together ?? {})
+      .filter(([other]) => live.has(other))
+      .map(([other, s]) => ({ id: other, name: live.get(other).name, avatar: live.get(other).avatar, hours: toHours(s) }))
+      .filter((t) => t.hours > 0)
+      .sort((a, b) => b.hours - a.hours)
+      .slice(0, 5)
 
     members.push({
       id,
@@ -128,14 +208,31 @@ export function buildPublic(store, snapshot, opts, now = new Date()) {
       activity: l.game ? { verb: 'Jugando a', name: l.game } : null,
       hours: toHours(rec.voice),
       week: toHours(weekSeconds(rec, today)),
+      today: toHours(rec.days?.[today] ?? 0),
       streak: streakDays(rec, today, opts.streakMinSeconds),
       games: gamesToHours(rec.games),
       rancho: toHours(rec.rancho),
       ranchoGames: gamesToHours(rec.ranchoGames),
+      sessions: {
+        count: rec.sessionCount ?? 0,
+        longest: toHours(rec.longest ?? 0),
+        average: rec.sessionCount ? toHours(rec.sessionSeconds / rec.sessionCount) : 0,
+        recent: recent.reverse(),
+      },
+      together,
     })
   }
 
   members.sort((a, b) => b.hours - a.hours || b.rancho - a.rancho)
+
+  // Íconos solo de los juegos que aparecen en los datos
+  const gameIcons = {}
+  const icons = store.gameIcons ?? {}
+  for (const m of members) {
+    for (const g of [...Object.keys(m.games), ...Object.keys(m.ranchoGames), m.activity?.name]) {
+      if (g && icons[g]) gameIcons[g] = icons[g]
+    }
+  }
 
   return {
     updatedAt: now.toISOString(),
@@ -144,6 +241,7 @@ export function buildPublic(store, snapshot, opts, now = new Date()) {
       onlineCount: snapshot.filter((m) => m.status !== 'offline').length,
       inVoiceCount: snapshot.filter((m) => m.inVoice).length,
     },
+    gameIcons,
     members,
   }
 }

@@ -23,6 +23,7 @@ Para generar la versión final (la que se publica): `npm run build`. Queda en `d
 | Datos de ejemplo (se muestran solo cuando el bot está apagado) | `src/data/mock.js` |
 | El bot que cuenta las horas | carpeta `bot/` (guía en `bot/README.md`) |
 | El puente gratuito en Cloudflare para publicar | carpeta `worker/` (guía en `PUBLICAR.md`) |
+| Íconos de juegos puestos a mano | `src/data/gameIcons.js` y la carpeta `public/games/` |
 | Colores, tipografías, tamaños, animaciones | `src/styles.css` (variables al inicio) |
 | Fondo aurora y estela del mouse | `src/components/AuroraBackground.jsx` |
 | Imágenes y logo | `public/` (`mascot.webp`, `logo-sm.webp`, `favicon.png`, `og.jpg`) |

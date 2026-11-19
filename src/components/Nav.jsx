@@ -1,6 +1,6 @@
 import { SERVER } from '../config.js'
 
-export default function Nav() {
+export default function Nav({ onOpenMembers }) {
   return (
     <header className="nav">
       <div className="wrap nav-inner">
@@ -11,6 +11,9 @@ export default function Nav() {
         <nav className="nav-links" aria-label="Secciones">
           <a href="#ranking">Ranking</a>
           <a href="#tops">Tops</a>
+          <button type="button" className="nav-btn" onClick={onOpenMembers}>
+            Miembros
+          </button>
           <a className="btn btn-sm primary" href={SERVER.invite} target="_blank" rel="noreferrer">
             Unirme
           </a>

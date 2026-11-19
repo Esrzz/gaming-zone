@@ -85,7 +85,7 @@ test('semana y racha', () => {
   assert.equal(streakDays({ days: {} }, TODAY, 600), 0)
 })
 
-test('buildPublic: ordena por horas, redondea y descarta a quien ya no está', () => {
+test('buildPublic: ordena por horas, redondea y incluye a todos los del servidor y descarta a quien ya no está', () => {
   const store = emptyStore()
   store.members = {
     1: { name: 'Nox', avatar: 'a', voice: 5400, rancho: 0, games: { X: 5400 }, ranchoGames: {}, days: {} },
@@ -99,11 +99,56 @@ test('buildPublic: ordena por horas, redondea y descarta a quien ya no está', (
   ]
   const out = buildPublic(store, snapshot, opts, now)
 
-  assert.deepEqual(out.members.map((m) => m.name), ['Kira', 'Nox'])
+  assert.deepEqual(out.members.map((m) => m.name), ['Kira', 'Nox', 'Sin datos'])
   assert.equal(out.members[1].hours, 1.5)
   assert.equal(out.members[0].rancho, 1)
   assert.deepEqual(out.members[0].ranchoGames, { Y: 1 })
   assert.deepEqual(out.members[1].activity, { verb: 'Jugando a', name: 'X' })
   assert.equal(out.members[0].activity, null)
+  assert.equal(out.members[2].hours, 0)
   assert.deepEqual(out.meta, { memberCount: 3, onlineCount: 2, inVoiceCount: 1 })
+})
+
+test('guarda el applicationId de los juegos y publica solo los íconos que se usan', () => {
+  const store = emptyStore()
+  applyTick(store, [member({ inVoice: true, game: 'Valorant', gameAppId: '123' })], 60, now, opts)
+  assert.equal(store.gameApps['Valorant'], '123')
+  store.gameIcons = { Valorant: 'https://cdn/v.png', Otro: 'https://cdn/o.png' }
+  const out = buildPublic(store, [member({ inVoice: true, game: 'Valorant' })], opts, now)
+  assert.deepEqual(out.gameIcons, { Valorant: 'https://cdn/v.png' })
+})
+
+test('sesiones: una racha continua en voz es una sesión; se parte con un corte largo', () => {
+  const store = emptyStore()
+  const inV = [member({ inVoice: true, game: 'Valorant' })]
+  const t = (min) => new Date(now.getTime() + min * 60_000)
+  for (let i = 0; i < 10; i++) applyTick(store, inV, 180, t(i * 3), opts) // 30 min seguidos
+  applyTick(store, [member()], 30, t(40), opts) // sale de voz: cierra la sesión
+  const rec = store.members['1']
+  assert.equal(rec.sessionCount, 1)
+  assert.equal(rec.sessions[0].g, 'Valorant')
+  assert.equal(Math.round(rec.longest / 60), 30)
+
+  // vuelve, y después un corte de 20 min sin ticks => otra sesión
+  applyTick(store, inV, 600, t(100), opts)
+  applyTick(store, inV, 600, t(130), opts)
+  applyTick(store, [member()], 30, t(131), opts)
+  assert.equal(rec.sessionCount, 2 + 1)
+})
+
+test('tiempo compartido: solo suma entre quienes están en el mismo canal', () => {
+  const store = emptyStore()
+  const snap = [
+    member({ id: '1', name: 'A', inVoice: true, channelId: 'c1' }),
+    member({ id: '2', name: 'B', inVoice: true, channelId: 'c1' }),
+    member({ id: '3', name: 'C', inVoice: true, channelId: 'c2' }),
+  ]
+  applyTick(store, snap, 3600, now, opts)
+  assert.equal(store.members['1'].together['2'], 3600)
+  assert.equal(store.members['3'].together['1'], undefined)
+  const out = buildPublic(store, snap, opts, now)
+  const a = out.members.find((m) => m.id === '1')
+  assert.deepEqual(a.together.map((x) => [x.id, x.hours]), [['2', 1]])
+  assert.equal(a.sessions.recent[0].live, true)
+  assert.equal(a.today, 1)
 })

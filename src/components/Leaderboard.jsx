@@ -2,6 +2,9 @@ import { useMemo } from 'react'
 import { useInView } from '../hooks/useInView.js'
 import CountUp from './CountUp.jsx'
 import Avatar from './Avatar.jsx'
+import { MemberLink } from '../context/MemberContext.jsx'
+import GameIcon from './GameIcon.jsx'
+import { MANUAL_ICONS } from '../data/gameIcons.js'
 
 function PadIcon() {
   return (
@@ -14,11 +17,11 @@ function PadIcon() {
   )
 }
 
-function Activity({ member }) {
+function Activity({ member, icons }) {
   if (member.activity) {
     return (
       <div className="activity live">
-        <PadIcon />
+        {MANUAL_ICONS[member.activity.name] || icons?.[member.activity.name] ? <GameIcon name={member.activity.name} icons={icons} size={22} /> : <PadIcon />}
         <span className="act-text">
           <span className="verb">{member.activity.verb}</span>{' '}
           <strong>{member.activity.name}</strong>
@@ -33,14 +36,14 @@ function Activity({ member }) {
   )
 }
 
-function Row({ member, rank, max, index, run }) {
+function Row({ member, rank, max, index, run, icons }) {
   return (
     <li className={`row rank-${rank}`} style={{ '--i': index, '--p': member.hours / max }}>
       <span className="rank">{rank}</span>
 
       <div className="member">
         <Avatar member={member} />
-        <strong className="name">{member.name}</strong>
+        <strong className="name"><MemberLink id={member.id} name={member.name} /></strong>
         {member.inVoice && (
           <span className="voice-tag" title="Está en un canal de voz">
             en voz
@@ -48,7 +51,7 @@ function Row({ member, rank, max, index, run }) {
         )}
       </div>
 
-      <Activity member={member} />
+      <Activity member={member} icons={icons} />
 
       <div className="hours">
         <span className="hours-num">
@@ -60,7 +63,7 @@ function Row({ member, rank, max, index, run }) {
   )
 }
 
-export default function Leaderboard({ members, live, stale }) {
+export default function Leaderboard({ members, icons, live, stale }) {
   const [ref, inView] = useInView(0.15)
 
   // Solo quienes ya sumaron horas en voz o están en voz ahora
@@ -101,7 +104,7 @@ export default function Leaderboard({ members, live, stale }) {
             </div>
             <ol className="rows">
               {rows.map((m, i) => (
-                <Row key={m.id} member={m} rank={i + 1} max={max} index={i} run={inView} />
+                <Row key={m.id} member={m} rank={i + 1} max={max} index={i} run={inView} icons={icons} />
               ))}
             </ol>
           </>

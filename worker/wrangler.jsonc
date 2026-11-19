@@ -1,18 +1,24 @@
 {
-  "name": "gaming-zone-api",
-  "main": "src/index.js",
-  "compatibility_date": "2025-06-01",
-
-  // Dónde se guardan los últimos datos que mandó el bot.
-  // Reemplazá el id por el que te muestra el comando:
-  //   npx wrangler kv namespace create STATS
-  "kv_namespaces": [
-    { "binding": "STATS", "id": "PEGAR_ACA_EL_ID" }
-  ],
-
-  "vars": {
-    // Qué página puede leer los datos. "*" = cualquiera.
-    // Cuando tengas la dirección final, podés poner: "https://tu-proyecto.pages.dev"
-    "ALLOWED_ORIGIN": "*"
-  }
+	"name": "gaming-zone-api",
+	"main": "src/index.js",
+	"compatibility_date": "2025-06-01",
+	// Dónde se guardan los últimos datos que mandó el bot.
+	// Reemplazá el id por el que te muestra el comando:
+	//   npx wrangler kv namespace create STATS
+	"kv_namespaces": [
+		{
+			"binding": "STATS",
+			"id": "9baa35ff873e4feeae2162dc31645be6",
+			"remote": true
+		}
+	],
+	"vars": {
+		// Qué página puede leer los datos. "*" = cualquiera.
+		// Cuando tengas la dirección final, podés poner: "https://tu-proyecto.pages.dev"
+		"ALLOWED_ORIGIN": "https://gamingzonestattracker.gamingzone.workers.dev",
+		 "DISCORD_CLIENT_ID": "1571243643816247397",
+		 // Dirección de tu página, sin barra final
+    	"SITE_URL": "https://gamingzonestattracker.gamingzone.workers.dev/"
+		// Qué token de Discord puede mandar datos. Lo podés generar en: "DISCORD_CLIENT_ID": "PEGAR_ACA_EL_APPLICATION_ID",		
+	}
 }

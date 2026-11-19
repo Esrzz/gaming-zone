@@ -70,6 +70,23 @@ En modo desarrollo la página busca los datos en `http://localhost:3001` sola. S
 | `PUSH_URL`, `PUSH_TOKEN` | Para publicar los datos en la nube (ver `PUBLICAR.md`). Si están vacías, el bot solo sirve los datos en tu PC |
 | `PUSH_EVERY_SECONDS` | Cada cuánto publica en la nube (120 por defecto, mínimo 90) |
 
+## Fichas de miembros
+
+Para la ficha de cada persona el bot además guarda:
+
+- **Sesiones en voz:** cada vez que alguien entra y sale de un canal de voz (se guardan las últimas 20 por persona, y se parte una sesión si pasan más de 5 minutos sin registrarse).
+- **Tiempo compartido:** cuánto tiempo estuvo cada par de personas en el mismo canal de voz a la vez.
+
+Esto empieza a juntarse desde que arrancás esta versión; no se puede reconstruir el pasado. Las horas anteriores se conservan.
+
+## Íconos de los juegos
+
+Cuando alguien juega, Discord le informa al bot el ID del juego, y con ese ID el bot busca el ícono oficial (en el CDN de Discord) y lo manda junto con los datos. No hay que configurar nada.
+
+- Los íconos aparecen a medida que alguien juega cada juego por primera vez (puede tardar unos minutos).
+- Si Discord no conoce el juego o no tiene ícono, la página muestra la inicial del juego sobre un color.
+- Para poner uno a mano, mirá `src/data/gameIcons.js` en la carpeta principal del proyecto.
+
 ## Pasarlo a la Raspberry Pi
 
 1. Instalá Node.js 18 o superior en la Raspberry.
