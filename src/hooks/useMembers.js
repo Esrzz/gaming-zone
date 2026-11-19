@@ -1,9 +1,7 @@
 import { useEffect, useState } from 'react'
 import { MEMBERS } from '../data/mock.js'
 
-// En desarrollo (npm run dev) busca el bot en tu propia PC.
-// Publicada, usa VITE_API_URL, que se define al compilar (ver PUBLICAR.md).
-const API = import.meta.env.VITE_API_URL ?? (import.meta.env.DEV ? 'http://localhost:3001' : 'https://gaming-zone-api.gamingzone.workers.dev')
+import { API } from '../lib/api.js'
 const REFRESH_MS = import.meta.env.DEV ? 30_000 : 60_000
 
 // Si el bot no manda datos hace más que esto, se lo considera desconectado
@@ -16,14 +14,18 @@ function markStale(data) {
     members: data.members.map((m) => ({ ...m, status: 'offline', inVoice: false, activity: null })),
     meta: data.meta ? { ...data.meta, onlineCount: 0, inVoiceCount: 0 } : null,
     gameIcons: data.gameIcons ?? {},
+    musicTop: data.musicTop ?? null,
+    records: data.records ?? [],
+    masters: data.masters ?? [],
+    events: data.events ?? [],
   }
 }
 
-// Devuelve { members, meta, gameIcons, live, stale }.
+// Devuelve { members, meta, gameIcons, musicTop, records, masters, events, live, stale }.
 //   live  = los datos vienen del bot (si no, son los de ejemplo)
 //   stale = el bot dejó de mandar datos hace un rato
 export function useMembers() {
-  const [state, setState] = useState({ members: MEMBERS, meta: null, gameIcons: {}, live: false, stale: false })
+  const [state, setState] = useState({ members: MEMBERS, meta: null, gameIcons: {}, musicTop: null, records: [], masters: [], events: [], live: false, stale: false })
 
   useEffect(() => {
     if (!API) return
@@ -37,12 +39,12 @@ export function useMembers() {
         const data = await res.json()
         const age = Date.now() - Date.parse(data.updatedAt)
         const stale = !(age <= STALE_MS)
-        const next = stale ? markStale(data) : { members: data.members, meta: data.meta, gameIcons: data.gameIcons ?? {} }
+        const next = stale ? markStale(data) : { members: data.members, meta: data.meta, gameIcons: data.gameIcons ?? {}, musicTop: data.musicTop ?? null, records: data.records ?? [], masters: data.masters ?? [], events: data.events ?? [] }
         if (!cancelled) setState({ ...next, live: true, stale })
       } catch {
         // Si ya teníamos datos reales, los dejamos hasta el próximo intento.
         if (!cancelled) {
-          setState((s) => (s.live ? s : { members: MEMBERS, meta: null, gameIcons: {}, live: false, stale: false }))
+          setState((s) => (s.live ? s : { members: MEMBERS, meta: null, gameIcons: {}, musicTop: null, records: [], masters: [], events: [], live: false, stale: false }))
         }
       }
     }

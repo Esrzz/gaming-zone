@@ -84,3 +84,10 @@ test('rechaza datos demasiado grandes', async () => {
   const grande = JSON.stringify({ members: [], relleno: 'x'.repeat(300 * 1024) })
   assert.equal((await push(env, grande)).status, 413)
 })
+
+test('si KV rechaza la escritura (límite diario), responde 503 con una explicación y no un 500', async () => {
+  const env = makeEnv({ STATS: { get: async () => null, put: async () => { throw new Error('KV put() limit exceeded for the day.') } } })
+  const res = await push(env, payload)
+  assert.equal(res.status, 503)
+  assert.match((await res.json()).error, /límite diario/)
+})

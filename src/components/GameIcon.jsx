@@ -9,15 +9,15 @@ function hue(name) {
 }
 
 // Ícono del juego. Si no hay imagen (o no carga), muestra la inicial sobre un color.
-export default function GameIcon({ name, icons, size = 28 }) {
-  const src = MANUAL_ICONS[name] ?? icons?.[name]
+export default function GameIcon({ name, icons, size = 28, src: given, round = false }) {
+  const src = given ?? MANUAL_ICONS[name] ?? icons?.[name]
   const [failed, setFailed] = useState(null)
   const style = { '--s': `${size}px` }
 
   if (src && failed !== src) {
     return (
       <img
-        className="gicon"
+        className={`gicon ${round ? 'round' : ''}`}
         style={style}
         src={src}
         alt=""
@@ -32,7 +32,7 @@ export default function GameIcon({ name, icons, size = 28 }) {
   }
   const initial = (name.match(/[\p{L}\p{N}]/u)?.[0] ?? '?').toUpperCase()
   return (
-    <span className="gicon gicon-fallback" style={{ ...style, '--h': hue(name) }} aria-hidden="true">
+    <span className={`gicon gicon-fallback ${round ? 'round' : ''}`} style={{ ...style, '--h': hue(name) }} aria-hidden="true">
       {initial}
     </span>
   )

@@ -79,6 +79,38 @@ Para la ficha de cada persona el bot además guarda:
 
 Esto empieza a juntarse desde que arrancás esta versión; no se puede reconstruir el pasado. Las horas anteriores se conservan.
 
+## Récords y medallas
+
+El bot guarda el mejor valor de cada récord y quién (o quiénes) lo tiene, en el mismo archivo `stats.json`. Un récord solo cambia de dueño cuando alguien lo supera; si dos personas empatan, lo comparten. Se conservan aunque alguien deje de contar o salga del servidor, y se guarda el dueño anterior de cada uno.
+
+Los récords que existen están en `src/records.js`. Los valores mínimos (por ejemplo 1 hora, o 2 días de racha) evitan que se premie algo trivial al principio. Los récords se calculan con los datos que ya tenés: la primera vez que arranca esta versión, cada medalla va a quien hoy lidera esa categoría.
+
+Cómo se calcula cada uno:
+
+| Récord | Qué mide |
+|---|---|
+| El gamer definitivo | Más horas en voz en total |
+| El sonámbulo | Sesión en voz más larga |
+| El empleado | Racha más larga de días seguidos en voz |
+| Jornada laboral | Más horas en voz dentro de 7 días |
+| El coleccionista | Más juegos distintos jugados (voz y fuera de voz) |
+| OTP | Más horas en un solo juego |
+| Máquina del Janeo | El juego con más horas entre todos (el dueño es el juego) |
+| El fantasma | Más tiempo seguido en un canal de voz sin jugar a nada |
+| Vibra alta | Más tiempo escuchando música |
+| El shapeshifter | Más juegos distintos (5 min o más cada uno) en una sola sesión de voz |
+
+## Música (Spotify)
+
+Si alguien tiene Spotify vinculado a su Discord y lo muestra como actividad, el bot toma la canción, el artista y la portada que Discord informa, y suma el tiempo que escucha. Se cuenta aparte de las horas en voz y de los juegos: no importa si está en un canal o jugando.
+
+- Solo funciona si la persona tiene activada la opción de mostrar Spotify como estado (Ajustes de usuario > Conexiones > Spotify > "Mostrar Spotify como tu estado").
+- Si la canción está en pausa, Discord deja de mostrar el avance y el bot deja de contar.
+- Discord solo da la portada del álbum, no la foto del artista. Para cada artista la página usa la portada de su canción más escuchada.
+- Por cada persona se guardan sus 100 canciones y artistas más escuchados, para que el archivo no crezca sin límite.
+
+Conviene avisarle al grupo que la página muestra lo que escuchan.
+
 ## Íconos de los juegos
 
 Cuando alguien juega, Discord le informa al bot el ID del juego, y con ese ID el bot busca el ícono oficial (en el CDN de Discord) y lo manda junto con los datos. No hay que configurar nada.
@@ -113,3 +145,10 @@ Los datos se guardan en el disco cada 5 minutos y al cerrar el bot de forma norm
 ## Para publicar la página
 
 Cuando la página esté en internet no puede leer directamente el bot que corre en tu casa. Por eso el bot puede publicar los datos en un Worker gratuito de Cloudflare (variables `PUSH_URL` y `PUSH_TOKEN` del `.env`) y la página los lee de ahí. La guía paso a paso está en `PUBLICAR.md`, en la carpeta principal del proyecto.
+
+
+## Podio de cada juego (medallas Master)
+
+Los **3 que más horas acumularon en cada juego** (dentro y fuera de voz) reciben medalla: **oro** el 1.º (es el **Master** del juego), **plata** el 2.º y **bronce** el 3.º. Para que un juego tenga podio hace falta que el servidor sume al menos **10 horas** en él y que lo hayan jugado al menos **2 personas**; cada medallista tiene que haber jugado un mínimo de 10 minutos, así que con 2 jugadores hay 2 medallas. Todo se ajusta arriba de `src/masters.js` (`MIN_TOTAL_HOURS`, `MIN_PLAYERS`, `MIN_PLAYER_SECONDS`, `PODIUM`).
+
+Los puestos solo cambian cuando alguien **supera** a otro (si empatan, nadie se mueve) y se guardan en `store.masters`, aparte de las sesiones. Si alguien del podio se va del servidor, su puesto pasa al siguiente. En la ficha aparece en "Podio de juegos" y en "Quién lidera cada juego" el líder lleva la etiqueta Master.

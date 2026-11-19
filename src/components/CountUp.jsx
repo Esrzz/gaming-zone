@@ -9,7 +9,7 @@ const formatter = (decimals) =>
 
 // Número que sube hasta `value`. Si el valor cambia más tarde (datos en vivo),
 // anima desde lo que se estaba mostrando, no desde cero.
-export default function CountUp({ value, run = true, duration = 1200, decimals = 0 }) {
+export default function CountUp({ value, run = true, duration = 1200, decimals = 0, format }) {
   const [n, setN] = useState(0)
   const shown = useRef(0)
 
@@ -36,5 +36,5 @@ export default function CountUp({ value, run = true, duration = 1200, decimals =
     return () => cancelAnimationFrame(raf)
   }, [value, run, duration])
 
-  return <>{formatter(decimals).format(n)}</>
+  return <>{format ? format(n) : formatter(decimals).format(n)}</>
 }

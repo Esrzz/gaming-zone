@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { useInView } from '../hooks/useInView.js'
 import CountUp from './CountUp.jsx'
+import { fmtHours } from '../lib/format.js'
 import Avatar from './Avatar.jsx'
 import { MemberLink } from '../context/MemberContext.jsx'
 import GameIcon from './GameIcon.jsx'
@@ -55,7 +56,7 @@ function Row({ member, rank, max, index, run, icons }) {
 
       <div className="hours">
         <span className="hours-num">
-          <CountUp value={member.hours} run={run} decimals={1} duration={1100 + index * 60} /> h
+          <CountUp value={member.hours} run={run} format={fmtHours} duration={1100 + index * 60} />
         </span>
         <span className="bar"><i /></span>
       </div>

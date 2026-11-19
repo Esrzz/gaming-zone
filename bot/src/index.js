@@ -5,6 +5,9 @@ import { applyTick, buildPublic, dayKey, pruneOldDays } from './tracker.js'
 import { startApi } from './api.js'
 import { createPublisher } from './publisher.js'
 import { createIconResolver } from './gameIcons.js'
+import { parseSpotify, pruneMusic } from './music.js'
+import { updateRecords } from './records.js'
+import { updateMasters } from './masters.js'
 
 let cfg
 try {
@@ -50,6 +53,7 @@ function snapshotGuild(g) {
     if (m.user.bot || cfg.excludeIds.has(m.id)) continue
 
     const playing = m.presence?.activities?.find((a) => a.type === ActivityType.Playing)
+    const spotify = m.presence?.activities?.find((a) => a.type === ActivityType.Listening && a.name === 'Spotify')
     const voiceChannelId = m.voice?.channelId
     out.push({
       id: m.id,
@@ -58,6 +62,7 @@ function snapshotGuild(g) {
       status: m.presence?.status ?? 'offline',
       game: playing?.name ?? null,
       gameAppId: playing?.applicationId ?? null,
+      music: parseSpotify(spotify),
       // el canal AFK no cuenta como estar en voz
       inVoice: Boolean(voiceChannelId) && voiceChannelId !== g.afkChannelId,
       channelId: voiceChannelId ?? null,
@@ -69,6 +74,7 @@ function snapshotGuild(g) {
 function save() {
   try {
     pruneOldDays(store, dayKey(new Date(), cfg.timezone))
+    pruneMusic(store)
     saveStore(store, cfg.dataFile)
   } catch (err) {
     console.error('No pude guardar los datos:', err.message)
@@ -84,7 +90,10 @@ function startTicking() {
     // Si pasó mucho más que un intervalo, la PC estuvo dormida o el bot trabado:
     // no se cuenta ese tiempo.
     if (dt > (cfg.tickMs / 1000) * 3) dt = 0
-    applyTick(store, snapshotGuild(guild), dt, new Date(now), cfg)
+    const snap = snapshotGuild(guild)
+    applyTick(store, snap, dt, new Date(now), cfg)
+    updateRecords(store, snap, new Date(now), cfg)
+    updateMasters(store, snap, new Date(now))
   }, cfg.tickMs)
 
   saveTimer = setInterval(() => {

@@ -152,3 +152,25 @@ test('tiempo compartido: solo suma entre quienes están en el mismo canal', () =
   assert.equal(a.sessions.recent[0].live, true)
   assert.equal(a.today, 1)
 })
+
+test('música: suma segundos por artista y canción, aparte de voz y juego, y arma el top', () => {
+  const store = emptyStore()
+  const song = { title: 'Canción 1', artists: ['Artista A', 'Artista B'], image: 'https://i.scdn.co/image/x', id: 'abc123XYZ789' }
+  applyTick(store, [member({ id: '1', name: 'Nox', music: song })], 600, now, opts)
+  applyTick(store, [member({ id: '2', name: 'Kira', music: song }), member({ id: '1', name: 'Nox', music: song })], 300, now, opts)
+  const rec = store.members['1']
+  assert.equal(rec.music, 900)
+  assert.equal(rec.voice, 0)
+  assert.equal(rec.artists['Artista A'], 900)
+
+  const snap = [member({ id: '1', name: 'Nox', music: song }), member({ id: '2', name: 'Kira' })]
+  const out = buildPublic(store, snap, opts, now)
+  assert.equal(out.members[0].music.hours, 0.25)
+  assert.equal(out.musicTop.artists[0].name, 'Artista A')
+  assert.equal(out.musicTop.artists[0].image, 'https://i.scdn.co/image/x')
+  assert.equal(out.musicTop.artists[0].top[0].name, 'Nox')
+  assert.equal(out.musicTop.songs[0].title, 'Canción 1')
+  assert.equal(out.musicTop.songs[0].id, 'abc123XYZ789')
+  assert.equal(out.members[0].music.songs[0].id, 'abc123XYZ789')
+  assert.equal(out.members.find((m) => m.id === '1').listening.title, 'Canción 1')
+})

@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react'
 
 // Ventana sobre la página: se cierra con Esc, tocando afuera o con la X.
 // Bloquea el scroll de fondo y devuelve el foco a donde estaba.
-export default function Modal({ title, onClose, header, children }) {
+export default function Modal({ title, onClose, header, children, variant }) {
   const closeRef = useRef(null)
 
   useEffect(() => {
@@ -31,8 +31,8 @@ export default function Modal({ title, onClose, header, children }) {
   }, [onClose])
 
   return (
-    <div className="overlay" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="modal" role="dialog" aria-modal="true" aria-label={title}>
+    <div className={`overlay ${variant ?? ''}`} onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+      <div className={`modal ${variant ?? ''}`} role="dialog" aria-modal="true" aria-label={title}>
         <div className="modal-head">
           {header}
           <button ref={closeRef} type="button" className="modal-close" onClick={onClose} aria-label="Cerrar">

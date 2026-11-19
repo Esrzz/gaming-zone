@@ -3,8 +3,12 @@
 //   POST /api/push     <- el bot manda los datos (necesita el token secreto)
 //   GET  /api/members  -> la página los lee (público, solo lectura)
 //   GET  /health       -> para comprobar que el Worker está vivo
+//   /auth/*, /api/connections, /api/me/connections -> inicio de sesión con Discord (ver auth.js)
 //
 // Variables: PUSH_TOKEN (secreto), ALLOWED_ORIGIN. Binding de KV: STATS.
+// Para el inicio de sesión: DISCORD_CLIENT_ID, SITE_URL, y los secretos DISCORD_CLIENT_SECRET y SESSION_SECRET.
+
+import { handleAuth } from './auth.js'
 
 const KEY = 'members'
 const MAX_BODY_CHARS = 256 * 1024
@@ -12,7 +16,7 @@ const MAX_BODY_CHARS = 256 * 1024
 function cors(env) {
   return {
     'Access-Control-Allow-Origin': env.ALLOWED_ORIGIN || '*',
-    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
     'Access-Control-Allow-Headers': 'Authorization, Content-Type',
     'Access-Control-Max-Age': '86400',
   }
@@ -48,6 +52,9 @@ export default {
 
     if (pathname === '/health') return json({ ok: true }, 200, headers)
 
+    const auth = await handleAuth(request, env, pathname, headers, json)
+    if (auth) return auth
+
     if (pathname === '/api/push') {
       if (request.method !== 'POST') return json({ error: 'Usá POST' }, 405, headers)
       if (!isAuthorized(request, env)) return json({ error: 'No autorizado' }, 401, headers)
@@ -63,7 +70,18 @@ export default {
       }
       if (!data || !Array.isArray(data.members)) return json({ error: 'Formato inesperado' }, 400, headers)
 
-      await env.STATS.put(KEY, text)
+      try {
+        await env.STATS.put(KEY, text)
+      } catch (err) {
+        // Lo más común: se agotó el límite diario de escrituras de KV (1.000 por día en el plan gratis).
+        // Se avisa con un error claro en vez de un 500 sin explicación.
+        console.error('KV put falló:', err?.message ?? err)
+        return json(
+          { error: 'No se pudo guardar (probablemente se agotó el límite diario de escrituras de KV). Se reinicia a las 21:00 de Argentina.' },
+          503,
+          headers,
+        )
+      }
       return new Response(null, { status: 204, headers })
     }
 

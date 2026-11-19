@@ -5,6 +5,8 @@
 //  - Jugando FUERA de un canal de voz     -> suma a "rancho aparte".
 //  - Conectado sin jugar ni estar en voz  -> no suma nada.
 
+import { publicMasters } from './masters.js'
+
 export function dayKey(date, timeZone) {
   // 'en-CA' formatea como YYYY-MM-DD
   return new Intl.DateTimeFormat('en-CA', {
@@ -41,6 +43,12 @@ function newRecord(m) {
     sessionSeconds: 0,
     longest: 0,
     together: {},
+    idleBest: 0, // más segundos seguidos en voz sin jugar
+    shapeBest: 0, // más juegos distintos en una sola sesión
+    // Spotify: segundos totales, por artista y por canción
+    music: 0,
+    artists: {},
+    songs: {},
   }
 }
 
@@ -69,6 +77,18 @@ function add(map, key, seconds) {
   map[key] = (map[key] ?? 0) + seconds
 }
 
+function addMusic(rec, music, dt) {
+  rec.music = (rec.music ?? 0) + dt
+  rec.artists ??= {}
+  rec.songs ??= {}
+  for (const a of music.artists) add(rec.artists, a, dt)
+  const key = `${music.artists.join(', ')} — ${music.title}`
+  const e = (rec.songs[key] ??= { t: music.title, ar: music.artists, img: null, id: null, s: 0 })
+  e.s += dt
+  if (music.image) e.img = music.image
+  if (music.id) e.id = music.id
+}
+
 /**
  * Suma `dt` segundos a cada miembro según lo que está haciendo en este momento.
  * snapshot: [{ id, name, avatar, status, game, inVoice }]
@@ -87,6 +107,15 @@ export function applyTick(store, snapshot, dt, now, opts) {
     const ranchoCounts = !m.inVoice && playing
 
     let rec = store.members[m.id]
+
+    // La música cuenta aparte: no depende de estar en voz ni jugando
+    if (m.music) {
+      rec ??= store.members[m.id] = newRecord(m)
+      rec.name = m.name
+      rec.avatar = m.avatar
+      addMusic(rec, m.music, dt)
+    }
+
     if (!voiceCounts && !ranchoCounts) {
       if (rec) {
         rec.name = m.name
@@ -109,6 +138,12 @@ export function applyTick(store, snapshot, dt, now, opts) {
       rec.cur ??= { s: nowMs - dt * 1000, e: nowMs, g: {} }
       rec.cur.e = nowMs
       if (playing) add(rec.cur.g, m.game, dt)
+
+      // Para los récords "El fantasma" y "El shapeshifter"
+      rec.cur.ir = playing ? 0 : (rec.cur.ir ?? 0) + dt
+      rec.idleBest = Math.max(rec.idleBest ?? 0, rec.cur.ir)
+      const distinct = Object.values(rec.cur.g).filter((sec) => sec >= 300).length
+      rec.shapeBest = Math.max(rec.shapeBest ?? 0, distinct)
 
       if (m.channelId) {
         const list = byChannel.get(m.channelId) ?? []
@@ -168,11 +203,110 @@ function gamesToHours(map) {
   )
 }
 
+const top = (obj, n) =>
+  Object.entries(obj ?? {})
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, n)
+
+// Lo más escuchado de una persona (para su ficha)
+function memberMusic(rec) {
+  const songs = Object.values(rec.songs ?? {})
+    .sort((a, b) => b.s - a.s)
+    .slice(0, 5)
+    .map((x) => ({ title: x.t, artist: x.ar.join(', '), image: x.img, id: x.id ?? null, hours: toHours(x.s) }))
+  const artistImg = {}
+  for (const x of Object.values(rec.songs ?? {}).sort((a, b) => b.s - a.s)) {
+    for (const a of x.ar) if (x.img && !artistImg[a]) artistImg[a] = x.img
+  }
+  return {
+    hours: toHours(rec.music ?? 0),
+    artists: top(rec.artists, 5).map(([name, s]) => ({ name, image: artistImg[name] ?? null, hours: toHours(s) })),
+    songs,
+  }
+}
+
+// Tops de música de todo el servidor, con quién escucha más cada artista y cada canción
+function buildMusicTop(store, live) {
+  const artists = new Map()
+  const songs = new Map()
+  let total = 0
+  const people = new Set()
+
+  const bump = (map, key, base, who, s) => {
+    const e = map.get(key) ?? { ...base, seconds: 0, who: new Map() }
+    e.seconds += s
+    if (!e.id && base.id) e.id = base.id
+    e.who.set(who.id, { id: who.id, name: who.name, s: (e.who.get(who.id)?.s ?? 0) + s })
+    map.set(key, e)
+    return e
+  }
+
+  for (const [id, rec] of Object.entries(store.members)) {
+    const l = live.get(id)
+    if (!l || !(rec.music > 0)) continue
+    total += rec.music
+    people.add(id)
+    const who = { id, name: l.name }
+    for (const [name, s] of Object.entries(rec.artists ?? {})) bump(artists, name, { name, image: null, best: 0 }, who, s)
+    for (const [key, x] of Object.entries(rec.songs ?? {})) {
+      bump(songs, key, { title: x.t, artist: x.ar.join(', '), image: x.img, id: x.id ?? null }, who, x.s)
+      for (const a of x.ar) {
+        const art = artists.get(a)
+        if (art && x.img && x.s > art.best) {
+          art.best = x.s
+          art.image = x.img // portada de la canción más escuchada de ese artista
+        }
+      }
+    }
+  }
+
+  const finish = (e) => {
+    const listeners = [...e.who.values()].sort((a, b) => b.s - a.s)
+    return {
+      ...e,
+      who: undefined,
+      best: undefined,
+      seconds: undefined,
+      hours: toHours(e.seconds),
+      listeners: listeners.length,
+      top: listeners.slice(0, 3).map((x) => ({ id: x.id, name: x.name, hours: toHours(x.s) })),
+    }
+  }
+  const rank = (map, n) =>
+    [...map.values()]
+      .sort((a, b) => b.seconds - a.seconds)
+      .slice(0, n)
+      .map(finish)
+      .filter((x) => x.hours > 0)
+
+  return { hours: toHours(total), people: people.size, artists: rank(artists, 20), songs: rank(songs, 20) }
+}
+
 // Arma el JSON que consume la página.
 export function buildPublic(store, snapshot, opts, now = new Date()) {
   const today = dayKey(now, opts.timezone)
   const live = new Map(snapshot.map((m) => [m.id, m]))
   const members = []
+
+  // Récords guardados + medallas por persona
+  const records = Object.entries(store.records ?? {}).map(([id, r]) => ({
+    id,
+    kind: r.kind,
+    value: r.kind === 'hours' ? toHours(r.value) : r.value,
+    holders: r.holders.map((h) => ({ ...h, avatar: h.id ? live.get(h.id)?.avatar ?? null : undefined })),
+    since: r.at,
+    // el dueño anterior: sus horas también se guardan en segundos, se pasan igual que el valor actual
+    previous: r.history?.length
+      ? { ...r.history[r.history.length - 1], value: r.kind === 'hours' ? toHours(r.history[r.history.length - 1].value) : r.history[r.history.length - 1].value }
+      : null,
+  }))
+  const medals = {}
+  for (const r of records) for (const h of r.holders) if (h.id) (medals[h.id] ??= []).push(r.id)
+
+  // Masters de cada juego (uno por juego) y los que tiene cada persona
+  const masters = publicMasters(store, live)
+  const masterGames = {}
+  for (const m of masters) (masterGames[m.id] ??= []).push(m.game)
 
   for (const l of snapshot) {
     const id = l.id
@@ -220,10 +354,19 @@ export function buildPublic(store, snapshot, opts, now = new Date()) {
         recent: recent.reverse(),
       },
       together,
+      listening: l.music
+        ? { title: l.music.title, artist: l.music.artists.join(', '), image: l.music.image }
+        : null,
+      music: memberMusic(rec),
+      medals: medals[id] ?? [],
+      masters: masterGames[id] ?? [],
     })
   }
 
   members.sort((a, b) => b.hours - a.hours || b.rancho - a.rancho)
+
+  const musicTop = buildMusicTop(store, live)
+
 
   // Íconos solo de los juegos que aparecen en los datos
   const gameIcons = {}
@@ -242,6 +385,9 @@ export function buildPublic(store, snapshot, opts, now = new Date()) {
       inVoiceCount: snapshot.filter((m) => m.inVoice).length,
     },
     gameIcons,
+    musicTop,
+    records,
+    masters,
     members,
   }
 }
