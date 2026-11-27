@@ -43,7 +43,8 @@ export default function AuroraBackground() {
     const trail = Array.from({ length: TRAIL_LEN }, () => ({ x: 0, y: 0 }))
 
     const resize = () => {
-      const dpr = Math.min(window.devicePixelRatio || 1, 1.5)
+      // Es puro brillo y desenfoque: a la mitad de resolución cuesta 4 veces menos y se ve igual
+      const dpr = 0.5
       // clientWidth no cuenta la barra de scroll: es el ancho real del canvas (innerWidth lo dibujaba corrido)
       w = document.documentElement.clientWidth
       h = window.innerHeight

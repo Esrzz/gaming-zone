@@ -1,7 +1,7 @@
 :root {
   /* Base: violeta oscuro. Rosa y cyan salen del logo y se usan solo en detalles. */
   --void: #0a0517;
-  --panel: rgba(24, 13, 52, 0.58);
+  --panel: rgba(24, 13, 52, 0.82);
   --line: rgba(167, 139, 250, 0.16);
   --text: #ece8fa;
   --muted: #9a8fc0;
@@ -64,8 +64,6 @@ ol, ul { list-style: none; padding: 0; }
 .nav {
   position: sticky; top: 0; z-index: 20;
   background: linear-gradient(rgba(10, 5, 23, 0.8), rgba(10, 5, 23, 0));
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
 }
 .nav-inner { display: flex; align-items: center; justify-content: space-between; height: 68px; }
 .brand { display: flex; align-items: center; gap: 12px; text-decoration: none; font: 700 1.15rem var(--display); letter-spacing: 0.01em; }
@@ -145,7 +143,7 @@ ol, ul { list-style: none; padding: 0; }
 /* ---------- Ranking ---------- */
 .board {
   border: 1px solid var(--line); border-radius: 20px; overflow: hidden;
-  background: var(--panel); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  background: var(--panel);
   box-shadow: 0 30px 80px -40px rgba(76, 29, 149, 0.8);
 }
 .board-cols, .row {
@@ -205,7 +203,7 @@ ol, ul { list-style: none; padding: 0; }
 
 /* ---------- Tops (desplegables) ---------- */
 .accs { display: grid; gap: 12px; }
-.acc { border: 1px solid var(--line); border-radius: 16px; background: var(--panel); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); transition: border-color 0.3s, box-shadow 0.3s; }
+.acc { border: 1px solid var(--line); border-radius: 16px; background: var(--panel); transition: border-color 0.3s, box-shadow 0.3s; }
 .acc.open { border-color: rgba(196, 181, 253, 0.32); box-shadow: 0 24px 60px -36px rgba(124, 58, 237, 0.9); }
 .acc h3 { font: inherit; }
 .acc h3 > button {
@@ -315,7 +313,7 @@ ol, ul { list-style: none; padding: 0; }
 .nav-btn:hover { color: var(--text); }
 .nav-btn:focus-visible { outline: 2px solid var(--orchid); outline-offset: 4px; border-radius: 4px; }
 body.modal-open { overflow: hidden; }
-.overlay { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; padding: 20px; background: rgba(6, 2, 18, 0.72); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); animation: fade 0.2s ease both; }
+.overlay { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; padding: 20px; background: rgba(6, 2, 18, 0.72); animation: fade 0.2s ease both; }
 .modal { position: relative; width: min(720px, 100%); max-height: min(88vh, 900px); display: flex; flex-direction: column; border: 1px solid var(--line); border-radius: 22px; background: #150a30; box-shadow: 0 30px 80px -20px rgba(0, 0, 0, 0.8), 0 0 60px -20px rgba(139, 92, 246, 0.6); animation: pop 0.28s var(--ease) both; overflow: hidden; }
 .modal-head { display: flex; align-items: center; gap: 16px; padding: 22px 24px 16px; border-bottom: 1px solid var(--line); }
 .modal-head h2 { font: 700 1.5rem var(--display); margin: 0; }
