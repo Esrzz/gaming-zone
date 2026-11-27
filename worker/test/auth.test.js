@@ -147,3 +147,27 @@ test('publicConnections limpia, recorta y respeta la visibilidad', () => {
   assert.equal(list[0].n.length, 64)
   assert.deepEqual(publicConnections('no es lista'), [])
 })
+
+test('EXTRA_SITES: vuelve a la otra página solo si está permitida', async () => {
+  const env = makeEnv({ EXTRA_SITES: 'https://nonogram.test' })
+  env.kv.set('members', JSON.stringify(members))
+  const restore = fakeDiscord()
+  try {
+    const go = async (ret) => {
+      const res = await call(env, `/auth/login?return=${encodeURIComponent(ret)}`)
+      const state = new URL(res.headers.get('Location')).searchParams.get('state')
+      return finish(env, state, res.headers.get('Set-Cookie').split(';')[0])
+    }
+    assert.match((await go('https://nonogram.test/ruta')).headers.get('Location'), /^https:\/\/nonogram\.test\/#gz_login=/)
+    assert.match((await go('https://malo.test')).headers.get('Location'), /^https:\/\/gz\.pages\.dev\/#gz_login=/)
+  } finally {
+    restore()
+  }
+})
+
+test('CORS: con ALLOWED_ORIGIN fijo, también responde a EXTRA_SITES', async () => {
+  const env = makeEnv({ ALLOWED_ORIGIN: 'https://gz.pages.dev', EXTRA_SITES: 'https://nonogram.test' })
+  const h = async (o) => (await call(env, '/health', { headers: { Origin: o } })).headers.get('Access-Control-Allow-Origin')
+  assert.equal(await h('https://nonogram.test'), 'https://nonogram.test')
+  assert.equal(await h('https://otro.test'), 'https://gz.pages.dev')
+})
