@@ -6,5 +6,5 @@ export const SERVER = {
   // Reemplazá por el link de invitación real (ej: https://discord.gg/abc123)
   invite: 'https://discord.gg/TU-INVITE',
   // Dirección de Nonogram Zone (Cloudflare Pages). Cambiala cuando tengas la definitiva.
-  nonogram: 'https://nonogram-zone.pages.dev',
+  nonogram: 'https://nonogram-zone.gamingzone.workers.dev',
 }
