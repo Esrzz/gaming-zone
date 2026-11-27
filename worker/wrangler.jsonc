@@ -18,7 +18,9 @@
 		"ALLOWED_ORIGIN": "https://gamingzonestattracker.gamingzone.workers.dev",
 		 "DISCORD_CLIENT_ID": "1571243643816247397",
 		 // Dirección de tu página, sin barra final
-    	"SITE_URL": "https://gamingzonestattracker.gamingzone.workers.dev/"
+    	"SITE_URL": "https://gamingzonestattracker.gamingzone.workers.dev/",
+		// Otras páginas que usan este inicio de sesión (Nonogram Zone), separadas por coma, sin barra final
+		"EXTRA_SITES": ""
 		// Qué token de Discord puede mandar datos. Lo podés generar en: "DISCORD_CLIENT_ID": "PEGAR_ACA_EL_APPLICATION_ID",		
 	}
 }
