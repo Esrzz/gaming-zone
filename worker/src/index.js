@@ -4,11 +4,13 @@
 //   GET  /api/members  -> la página los lee (público, solo lectura)
 //   GET  /health       -> para comprobar que el Worker está vivo
 //   /auth/*, /api/connections, /api/me/connections -> inicio de sesión con Discord (ver auth.js)
+//   /nz/pw/*           -> contraseña de perfil de Nonogram Zone (ver passwords.js)
 //
 // Variables: PUSH_TOKEN (secreto), ALLOWED_ORIGIN. Binding de KV: STATS.
 // Para el inicio de sesión: DISCORD_CLIENT_ID, SITE_URL, y los secretos DISCORD_CLIENT_SECRET y SESSION_SECRET.
 
 import { extraSites, handleAuth } from './auth.js'
+import { handlePassword } from './passwords.js'
 
 const KEY = 'members'
 const MAX_BODY_CHARS = 256 * 1024
@@ -59,6 +61,9 @@ export default {
 
     const auth = await handleAuth(request, env, pathname, headers, json)
     if (auth) return auth
+
+    const pw = await handlePassword(request, env, pathname, headers, json)
+    if (pw) return pw
 
     if (pathname === '/api/push') {
       if (request.method !== 'POST') return json({ error: 'Usá POST' }, 405, headers)

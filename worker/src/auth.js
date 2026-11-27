@@ -78,7 +78,7 @@ function readCookie(request, name) {
   return null
 }
 
-async function sessionOf(request, env) {
+export async function sessionOf(request, env) {
   const m = /^Bearer (.+)$/.exec(request.headers.get('Authorization') ?? '')
   if (!m || !env.SESSION_SECRET) return null
   const s = await verifyToken(m[1], env.SESSION_SECRET)
