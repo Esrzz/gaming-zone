@@ -6,5 +6,6 @@
 //        'Hunt: Showdown 1896': '/games/hunt.png',
 //      (también sirve una URL completa de internet)
 export const MANUAL_ICONS = {
+  "Visual Studio Code": "/games/vscode.png",
   // 'Hunt: Showdown 1896': '/games/hunt.png',
 }
