@@ -44,7 +44,8 @@ export default function AuroraBackground() {
 
     const resize = () => {
       const dpr = Math.min(window.devicePixelRatio || 1, 1.5)
-      w = window.innerWidth
+      // clientWidth no cuenta la barra de scroll: es el ancho real del canvas (innerWidth lo dibujaba corrido)
+      w = document.documentElement.clientWidth
       h = window.innerHeight
       canvas.width = Math.round(w * dpr)
       canvas.height = Math.round(h * dpr)
