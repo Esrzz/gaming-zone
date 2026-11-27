@@ -9,7 +9,9 @@
 //
 // La sesión es un token firmado con HMAC (SESSION_SECRET): no se guarda nada en el servidor y no depende de
 // cookies entre dominios. El token de acceso de Discord se usa una sola vez y se descarta.
-// Variables: DISCORD_CLIENT_ID, SITE_URL. Secretos: DISCORD_CLIENT_SECRET, SESSION_SECRET.
+// Otras páginas (ej. Nonogram Zone) pueden usar el mismo inicio de sesión: se listan en EXTRA_SITES (orígenes separados
+// por coma) y piden /auth/login?return=<origen>; al terminar, Discord las trae de vuelta a esa página.
+// Variables: DISCORD_CLIENT_ID, SITE_URL, EXTRA_SITES (opcional). Secretos: DISCORD_CLIENT_SECRET, SESSION_SECRET.
 
 const DISCORD = 'https://discord.com/api/v10'
 const MEMBERS_KEY = 'members'
@@ -50,7 +52,23 @@ export async function verifyToken(token, secret, now = Date.now()) {
 const redirect = (url, extra = {}) => new Response(null, { status: 302, headers: { Location: url, ...extra } })
 const configured = (env) => env.DISCORD_CLIENT_ID && env.DISCORD_CLIENT_SECRET && env.SESSION_SECRET && env.SITE_URL
 const siteUrl = (env) => String(env.SITE_URL).replace(/\/+$/, '')
-const back = (env, key, value) => redirect(`${siteUrl(env)}/#${key}=${encodeURIComponent(value)}`)
+const back = (env, key, value, site = siteUrl(env)) => redirect(`${site}/#${key}=${encodeURIComponent(value)}`)
+
+export const extraSites = (env) =>
+  String(env.EXTRA_SITES ?? '')
+    .split(',')
+    .map((s) => s.trim().replace(/\/+$/, ''))
+    .filter(Boolean)
+
+// Origen al que volver tras el login: solo si está en la lista de páginas permitidas (evita redirecciones abiertas)
+export function returnSite(env, value) {
+  try {
+    const origin = new URL(String(value)).origin
+    return extraSites(env).includes(origin) ? origin : null
+  } catch {
+    return null
+  }
+}
 
 function readCookie(request, name) {
   for (const part of (request.headers.get('Cookie') ?? '').split(';')) {
@@ -86,7 +104,8 @@ export function publicConnections(list) {
 async function login(request, env) {
   if (!configured(env)) return null
   const nonce = toB64u(crypto.getRandomValues(new Uint8Array(18)))
-  const cookie = await signToken({ nonce, exp: Date.now() + STATE_MINUTES * 60_000 }, env.SESSION_SECRET)
+  const ret = returnSite(env, new URL(request.url).searchParams.get('return'))
+  const cookie = await signToken({ nonce, ret, exp: Date.now() + STATE_MINUTES * 60_000 }, env.SESSION_SECRET)
   const url = new URL('https://discord.com/oauth2/authorize')
   url.searchParams.set('client_id', env.DISCORD_CLIENT_ID)
   url.searchParams.set('response_type', 'code')
@@ -103,8 +122,9 @@ async function callback(request, env) {
   if (!configured(env)) return null
   const url = new URL(request.url)
   const clear = { 'Set-Cookie': 'gz_oauth=; Max-Age=0; Path=/auth; HttpOnly; Secure; SameSite=Lax' }
+  let site = siteUrl(env)
   const fail = (why) => {
-    const r = back(env, 'gz_login_error', why)
+    const r = back(env, 'gz_login_error', why, site)
     r.headers.set('Set-Cookie', clear['Set-Cookie'])
     return r
   }
@@ -112,6 +132,7 @@ async function callback(request, env) {
   if (url.searchParams.get('error')) return fail('denied')
 
   const saved = await verifyToken(readCookie(request, 'gz_oauth') ?? '', env.SESSION_SECRET)
+  if (saved?.ret && returnSite(env, saved.ret)) site = saved.ret
   const state = url.searchParams.get('state')
   const code = url.searchParams.get('code')
   if (!saved || !state || saved.nonce !== state || !code) return fail('state')
@@ -163,7 +184,7 @@ async function callback(request, env) {
   }
 
   const token = await signToken({ sub: user.id, n: member.name ?? user.global_name ?? user.username, exp: Date.now() + SESSION_DAYS * 86_400_000 }, env.SESSION_SECRET)
-  const r = back(env, 'gz_login', token)
+  const r = back(env, 'gz_login', token, site)
   r.headers.set('Set-Cookie', clear['Set-Cookie'])
   return r
 }

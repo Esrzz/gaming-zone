@@ -8,14 +8,19 @@
 // Variables: PUSH_TOKEN (secreto), ALLOWED_ORIGIN. Binding de KV: STATS.
 // Para el inicio de sesión: DISCORD_CLIENT_ID, SITE_URL, y los secretos DISCORD_CLIENT_SECRET y SESSION_SECRET.
 
-import { handleAuth } from './auth.js'
+import { extraSites, handleAuth } from './auth.js'
 
 const KEY = 'members'
 const MAX_BODY_CHARS = 256 * 1024
 
-function cors(env) {
+// Con ALLOWED_ORIGIN fijo, también se aceptan las páginas de EXTRA_SITES (se responde con el origen que pregunta)
+function cors(env, request) {
+  const main = env.ALLOWED_ORIGIN || '*'
+  const origin = request?.headers.get('Origin')
+  const allowed = main === '*' ? '*' : origin && [main.replace(/\/+$/, ''), ...extraSites(env)].includes(origin) ? origin : main
   return {
-    'Access-Control-Allow-Origin': env.ALLOWED_ORIGIN || '*',
+    Vary: 'Origin',
+    'Access-Control-Allow-Origin': allowed,
     'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
     'Access-Control-Allow-Headers': 'Authorization, Content-Type',
     'Access-Control-Max-Age': '86400',
@@ -45,7 +50,7 @@ function isAuthorized(request, env) {
 
 export default {
   async fetch(request, env) {
-    const headers = cors(env)
+    const headers = cors(env, request)
     const { pathname } = new URL(request.url)
 
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers })
