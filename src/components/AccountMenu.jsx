@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import Avatar from './Avatar.jsx'
 import { SERVER } from '../config.js'
+import { readToken } from '../lib/auth.js'
 
 // Foto y nombre de quien inició sesión, con un menú: mi perfil, quitar mis conexiones y cerrar sesión.
 export default function AccountMenu({ me, hasConnections, onOpenProfile, onRemoveConnections, onLogout }) {
@@ -36,7 +37,17 @@ export default function AccountMenu({ me, hasConnections, onOpenProfile, onRemov
       {open && (
         <div className="account-menu" role="group" aria-label="Tu cuenta">
           <button type="button" onClick={run(onOpenProfile)}>Mi perfil</button>
-          <a href={SERVER.nonogram} target="_blank" rel="noreferrer" onClick={() => setOpen(false)}>Nonogram Zone ↗</a>
+          <a
+            href={SERVER.nonogram}
+            target="_blank"
+            rel="noreferrer"
+            onClick={(e) => {
+              // Pasa la sesión a Nonogram Zone en el fragmento (#…), que el navegador nunca envía a ningún servidor
+              const t = readToken()
+              if (t) e.currentTarget.href = `${SERVER.nonogram}#gz_login=${encodeURIComponent(t)}`
+              setOpen(false)
+            }}
+          >Nonogram Zone ↗</a>
           {hasConnections && <button type="button" onClick={run(onRemoveConnections)}>Quitar mis conexiones</button>}
           <button type="button" onClick={run(onLogout)}>Cerrar sesión</button>
         </div>
