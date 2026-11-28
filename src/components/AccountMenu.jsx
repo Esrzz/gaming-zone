@@ -20,6 +20,10 @@ export default function AccountMenu({ me, hasConnections, onOpenProfile, onRemov
     }
   }, [open])
 
+  // La sesión viaja en el fragmento (#…), que el navegador nunca manda a un servidor; así también sirve con clic del medio
+  const token = readToken()
+  const nonogramHref = token ? `${SERVER.nonogram}#gz_login=${encodeURIComponent(token)}` : SERVER.nonogram
+
   const run = (fn) => () => {
     setOpen(false)
     fn()
@@ -37,17 +41,7 @@ export default function AccountMenu({ me, hasConnections, onOpenProfile, onRemov
       {open && (
         <div className="account-menu" role="group" aria-label="Tu cuenta">
           <button type="button" onClick={run(onOpenProfile)}>Mi perfil</button>
-          <a
-            href={SERVER.nonogram}
-            target="_blank"
-            rel="noreferrer"
-            onClick={(e) => {
-              // Pasa la sesión a Nonogram Zone en el fragmento (#…), que el navegador nunca envía a ningún servidor
-              const t = readToken()
-              if (t) e.currentTarget.href = `${SERVER.nonogram}#gz_login=${encodeURIComponent(t)}`
-              setOpen(false)
-            }}
-          >Nonogram Zone ↗</a>
+          <a href={nonogramHref} target="_blank" rel="noreferrer" onClick={() => setOpen(false)}>Nonogram Zone ↗</a>
           {hasConnections && <button type="button" onClick={run(onRemoveConnections)}>Quitar mis conexiones</button>}
           <button type="button" onClick={run(onLogout)}>Cerrar sesión</button>
         </div>
